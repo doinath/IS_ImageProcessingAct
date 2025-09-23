@@ -55,6 +55,7 @@
             this.label4 = new System.Windows.Forms.Label();
             this.loadImage = new System.Windows.Forms.Button();
             this.subtract = new System.Windows.Forms.Button();
+            this.stop_webcamInPicBox2 = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pic_box1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pic_box2)).BeginInit();
@@ -104,7 +105,8 @@
             this.greyscaleToolStripMenuItem,
             this.colorInversionToolStripMenuItem,
             this.histogramToolStripMenuItem,
-            this.sepiaToolStripMenuItem});
+            this.sepiaToolStripMenuItem,
+            this.stop_webcamInPicBox2});
             this.imageProcessingToolStripMenuItem.Name = "imageProcessingToolStripMenuItem";
             this.imageProcessingToolStripMenuItem.Size = new System.Drawing.Size(112, 20);
             this.imageProcessingToolStripMenuItem.Text = "Image Processing";
@@ -112,35 +114,35 @@
             // copyToolStripMenuItem
             // 
             this.copyToolStripMenuItem.Name = "copyToolStripMenuItem";
-            this.copyToolStripMenuItem.Size = new System.Drawing.Size(154, 22);
+            this.copyToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.copyToolStripMenuItem.Text = "Basic Copy";
             this.copyToolStripMenuItem.Click += new System.EventHandler(this.copyToolStripMenuItem_Click);
             // 
             // greyscaleToolStripMenuItem
             // 
             this.greyscaleToolStripMenuItem.Name = "greyscaleToolStripMenuItem";
-            this.greyscaleToolStripMenuItem.Size = new System.Drawing.Size(154, 22);
+            this.greyscaleToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.greyscaleToolStripMenuItem.Text = "Greyscale";
             this.greyscaleToolStripMenuItem.Click += new System.EventHandler(this.greyscaleToolStripMenuItem_Click);
             // 
             // colorInversionToolStripMenuItem
             // 
             this.colorInversionToolStripMenuItem.Name = "colorInversionToolStripMenuItem";
-            this.colorInversionToolStripMenuItem.Size = new System.Drawing.Size(154, 22);
+            this.colorInversionToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.colorInversionToolStripMenuItem.Text = "Color Inversion";
             this.colorInversionToolStripMenuItem.Click += new System.EventHandler(this.colorInversionToolStripMenuItem_Click);
             // 
             // histogramToolStripMenuItem
             // 
             this.histogramToolStripMenuItem.Name = "histogramToolStripMenuItem";
-            this.histogramToolStripMenuItem.Size = new System.Drawing.Size(154, 22);
+            this.histogramToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.histogramToolStripMenuItem.Text = "Histogram";
             this.histogramToolStripMenuItem.Click += new System.EventHandler(this.histogramToolStripMenuItem_Click);
             // 
             // sepiaToolStripMenuItem
             // 
             this.sepiaToolStripMenuItem.Name = "sepiaToolStripMenuItem";
-            this.sepiaToolStripMenuItem.Size = new System.Drawing.Size(154, 22);
+            this.sepiaToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.sepiaToolStripMenuItem.Text = "Sepia";
             this.sepiaToolStripMenuItem.Click += new System.EventHandler(this.sepiaToolStripMenuItem_Click);
             // 
@@ -296,6 +298,13 @@
             this.subtract.UseVisualStyleBackColor = true;
             this.subtract.Click += new System.EventHandler(this.subtract_Click);
             // 
+            // stop_webcamInPicBox2
+            // 
+            this.stop_webcamInPicBox2.Name = "stop_webcamInPicBox2";
+            this.stop_webcamInPicBox2.Size = new System.Drawing.Size(180, 22);
+            this.stop_webcamInPicBox2.Text = "Stop [Webcam]";
+            this.stop_webcamInPicBox2.Click += new System.EventHandler(this.stop_webcamInPicBox2_Click);
+            // 
             // ImageProcessor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -358,6 +367,7 @@
         private System.Windows.Forms.ToolStripMenuItem webcamToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem startWebcamToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem stopWebcamToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem stop_webcamInPicBox2;
     }
 }
 

@@ -38,7 +38,6 @@ namespace ImageProcessingActivity
             Bitmap currentFrame = GetDeviceFrame();
             if (currentFrame == null) return;
 
-            // Apply filter based on mode
             switch (mode)
             {
                 case ProcessingMode.Grayscale:
@@ -56,8 +55,8 @@ namespace ImageProcessingActivity
                 case ProcessingMode.Copy:
                 case ProcessingMode.None:
                 default:
-                    // Do nothing
-                    break;
+                    currentFrame.Dispose();
+                    return;
             }
 
             var oldImage = pic_box2.Image;
@@ -96,12 +95,10 @@ namespace ImageProcessingActivity
 
             if (isCamOn && pic_box2.Image != null)
             {
-                // Use webcam frame
                 sourceImage = new Bitmap(pic_box2.Image);
             }
             else if (pic_box1.Image != null)
             {
-                // Use loaded image
                 sourceImage = new Bitmap(pic_box1.Image);
             }
             else
@@ -281,11 +278,11 @@ namespace ImageProcessingActivity
 
             if (isCamOn && pic_box2.Image != null)
             {
-                sourceImage = new Bitmap(pic_box2.Image); // capture webcam
+                sourceImage = new Bitmap(pic_box2.Image); 
             }
             else if (pic_box1.Image != null)
             {
-                sourceImage = new Bitmap(pic_box1.Image); // loaded image
+                sourceImage = new Bitmap(pic_box1.Image); 
             }
             else
             {
@@ -380,14 +377,28 @@ namespace ImageProcessingActivity
 
         private void subtract_Click(object sender, EventArgs e)
         {
-            if (pic_box1.Image == null || pic_box2.Image == null)
+            if (pic_box1.Image == null)
             {
-                MessageBox.Show("Please load BOTH foreground and background images first!");
+                MessageBox.Show("Please load a foreground image first!");
                 return;
             }
 
             Bitmap foreground = new Bitmap(pic_box1.Image);
-            Bitmap background = new Bitmap(pic_box2.Image);
+            Bitmap background;
+
+            if (isCamOn && pic_box2.Image != null)
+            {
+                background = new Bitmap(pic_box2.Image);
+            }
+            else if (pic_box2.Image != null)
+            {
+                background = new Bitmap(pic_box2.Image);
+            }
+            else
+            {
+                MessageBox.Show("Please load or start webcam for background!");
+                return;
+            }
 
             int width = Math.Min(foreground.Width, background.Width);
             int height = Math.Min(foreground.Height, background.Height);
@@ -415,6 +426,9 @@ namespace ImageProcessingActivity
             pic_box3.Image?.Dispose();
             pic_box3.Image = result;
             pic_box3.SizeMode = PictureBoxSizeMode.StretchImage;
+
+            foreground.Dispose();
+            background.Dispose();
         }
 
         private void startWebcamToolStripMenuItem_Click(object sender, EventArgs e)
@@ -484,6 +498,16 @@ namespace ImageProcessingActivity
             }
         }
 
+        private void stop_webcamInPicBox2_Click(object sender, EventArgs e)
+        {
+            if (!isCamOn) return;
+
+            mode = ProcessingMode.None;
+            pic_box2.Image?.Dispose();
+            pic_box2.Image = null;
+            label2.Text = "RESULT";
+        }
+
         private void btnLoad_image_Click(object sender, EventArgs e)
         {
             using (OpenFileDialog ofd = new OpenFileDialog() { Filter = "JPEG|*.jpg;*.png;*.jpeg", ValidateNames = true, Multiselect = false })
@@ -491,9 +515,15 @@ namespace ImageProcessingActivity
                 if (ofd.ShowDialog() == DialogResult.OK)
                 {
                     pic_box2.Image?.Dispose();
-                    pic_box2.Image = Image.FromFile(ofd.FileName);
-                    imageA = new Bitmap(pic_box1.Image);
+
+                    Bitmap loadedImage = new Bitmap(ofd.FileName);
+                    pic_box2.Image = loadedImage;
                     pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
+
+            
+                    if (pic_box1.Image != null && !isCamOn)
+                        imageA = new Bitmap(pic_box1.Image);
+
                     label2.Text = "BACKGROUND";
                 }
             }
