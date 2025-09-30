@@ -383,7 +383,7 @@ namespace ImageProcessingActivity
 
             if (isCamOn)
             {
-                // Take a fresh snapshot from the webcam
+               
                 foreground = GetDeviceFrame();
                 if (foreground == null)
                 {
@@ -426,7 +426,6 @@ namespace ImageProcessingActivity
                     Color fg = foreground.GetPixel(x, y);
                     Color bg = background.GetPixel(x, y);
 
-                    // Green-screen effect: replace green with background
                     if (fg.G > 100 && fg.G > fg.R + 40 && fg.G > fg.B + 40)
                     {
                         result.SetPixel(x, y, bg);
@@ -552,7 +551,7 @@ namespace ImageProcessingActivity
 
         private void save_Click(object sender, EventArgs e)
         {
-            if (pic_box2.Image == null)
+            if (pic_box2.Image == null && pic_box3.Image == null)
             {
                 MessageBox.Show("No image to save!");
                 return;
@@ -576,8 +575,16 @@ namespace ImageProcessingActivity
                         else if (ext == ".bmp")
                             format = System.Drawing.Imaging.ImageFormat.Bmp;
 
-                        pic_box2.Image.Save(sfd.FileName, format);
-                        MessageBox.Show("Image saved successfully!");
+                        if (pic_box2.Image != null)
+                        {
+                            pic_box2.Image.Save(sfd.FileName, format);
+                        }
+                        else if (pic_box3.Image != null)
+                        {
+                            pic_box3.Image.Save(sfd.FileName, format);
+                        }
+                       
+                            MessageBox.Show("Image saved successfully!");
                     }
                     catch (Exception ex)
                     {
@@ -585,16 +592,6 @@ namespace ImageProcessingActivity
                     }
                 }
             }
-        }
-
-        private void stop_webcamInPicBox2_Click(object sender, EventArgs e)
-        {
-            if (!isCamOn) return;
-
-            mode = ProcessingMode.None;
-            pic_box2.Image?.Dispose();
-            pic_box2.Image = null;
-            label2.Text = "RESULT";
         }
 
         private void btnLoad_image_Click(object sender, EventArgs e)
@@ -691,91 +688,141 @@ namespace ImageProcessingActivity
             {  0,  1,  0 }
         };
 
+        private Bitmap GetSourceForFilter()
+        {
+            if (isCamOn)
+            {
+                return GetDeviceFrame(); // current webcam frame
+            }
+            else if (imageB != null)
+            {
+                return new Bitmap(imageB); // static loaded image
+            }
+            else
+            {
+                MessageBox.Show("No image or webcam feed available!");
+                return null;
+            }
+        }
+
         private void smoothFilter_Click(object sender, EventArgs e)
         {
-            if (imageB == null) return;
-            resultImage = Convolution_Filter(imageB, SmoothKernel, 1.0 / 9.0, 0.0);
+            Bitmap source = GetSourceForFilter();
+            if (source == null) return;
+
+            resultImage = Convolution_Filter(source, SmoothKernel, 1.0 / 9.0, 0.0);
+            pic_box2.Image?.Dispose();
             pic_box2.Image = resultImage;
             pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
         }
-        
+
         private void gaussianBlurFilter_Click(object sender, EventArgs e)
         {
-            if (imageB == null) return;
-            resultImage = Convolution_Filter(imageB, GaussianBlurKernel, 1.0 / 16.0, 0.0);
+            Bitmap source = GetSourceForFilter();
+            if (source == null) return;
+
+            resultImage = Convolution_Filter(source, GaussianBlurKernel, 1.0 / 16.0, 0.0);
+            pic_box2.Image?.Dispose();
             pic_box2.Image = resultImage;
             pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
         }
 
         private void sharpenFilter_Click(object sender, EventArgs e)
         {
-            if (imageB == null) return;
-            resultImage = Convolution_Filter(imageB, SharpenKernel, 1.0 / 3.0, 0.0);
+            Bitmap source = GetSourceForFilter();
+            if (source == null) return;
+
+            resultImage = Convolution_Filter(source, SharpenKernel, 1.0 / 3.0, 0.0);
+            pic_box2.Image?.Dispose();
             pic_box2.Image = resultImage;
             pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
         }
 
         private void meanRemovalFilter_Click(object sender, EventArgs e)
         {
-            if (imageB == null) return;
-            resultImage = Convolution_Filter(imageB, MeanRemovalKernel, 1.0, 0.0);
+            Bitmap source = GetSourceForFilter();
+            if (source == null) return;
+
+            resultImage = Convolution_Filter(source, MeanRemovalKernel, 1.0, 0.0);
+            pic_box2.Image?.Dispose();
             pic_box2.Image = resultImage;
             pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
         }
 
-        // Emboss Filters
+        // ===== Emboss Variants =====
         private void embossFilter_Click(object sender, EventArgs e)
         {
-            if (imageB == null) return;
-            resultImage = Convolution_Filter(imageB, EmbossKernel, 1.0, 128.0);
+            Bitmap source = GetSourceForFilter();
+            if (source == null) return;
+
+            resultImage = Convolution_Filter(source, EmbossKernel, 1.0, 128.0);
+            pic_box2.Image?.Dispose();
             pic_box2.Image = resultImage;
             pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
         }
+
         private void embossLaplacianFilter_Click(object sender, EventArgs e)
         {
-            if (imageB == null) return;
-            // Factor = 1.0, Offset = 127 (to shift grayscale into visible range)
-            resultImage = Convolution_Filter(imageB, EmbossLaplacianKernel, 1.0, 127.0);
+            Bitmap source = GetSourceForFilter();
+            if (source == null) return;
+
+            resultImage = Convolution_Filter(source, EmbossLaplacianKernel, 1.0, 127.0);
+            pic_box2.Image?.Dispose();
             pic_box2.Image = resultImage;
             pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
         }
+
         private void embossHVFilter_Click(object sender, EventArgs e)
         {
-            if (imageB == null) return;
-            resultImage = Convolution_Filter(imageB, EmbossHVKernel, 1.0, 128.0);
+            Bitmap source = GetSourceForFilter();
+            if (source == null) return;
+
+            resultImage = Convolution_Filter(source, EmbossHVKernel, 1.0, 128.0);
+            pic_box2.Image?.Dispose();
             pic_box2.Image = resultImage;
             pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
         }
 
         private void embossAllFilter_Click(object sender, EventArgs e)
         {
-            if (imageB == null) return;
-            resultImage = Convolution_Filter(imageB, EmbossAllKernel, 1.0, 128.0);
+            Bitmap source = GetSourceForFilter();
+            if (source == null) return;
+
+            resultImage = Convolution_Filter(source, EmbossAllKernel, 1.0, 128.0);
+            pic_box2.Image?.Dispose();
             pic_box2.Image = resultImage;
             pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
         }
 
         private void embossLossyFilter_Click(object sender, EventArgs e)
         {
-            if (imageB == null) return;
-            resultImage = Convolution_Filter(imageB, EmbossLossyKernel, 1.0, 128.0);
+            Bitmap source = GetSourceForFilter();
+            if (source == null) return;
+
+            resultImage = Convolution_Filter(source, EmbossLossyKernel, 1.0, 128.0);
+            pic_box2.Image?.Dispose();
             pic_box2.Image = resultImage;
             pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
         }
 
-        
         private void embossHorizontalFilter_Click(object sender, EventArgs e)
         {
-            if (imageB == null) return;
-            resultImage = Convolution_Filter(imageB, EmbossHorizontalKernel, 1.0, 128.0);
+            Bitmap source = GetSourceForFilter();
+            if (source == null) return;
+
+            resultImage = Convolution_Filter(source, EmbossHorizontalKernel, 1.0, 128.0);
+            pic_box2.Image?.Dispose();
             pic_box2.Image = resultImage;
             pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
         }
 
         private void embossVerticalFilter_Click(object sender, EventArgs e)
         {
-            if (imageB == null) return;
-            resultImage = Convolution_Filter(imageB, EmbossVerticalKernel, 1.0, 128.0);
+            Bitmap source = GetSourceForFilter();
+            if (source == null) return;
+
+            resultImage = Convolution_Filter(source, EmbossVerticalKernel, 1.0, 128.0);
+            pic_box2.Image?.Dispose();
             pic_box2.Image = resultImage;
             pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
         }
