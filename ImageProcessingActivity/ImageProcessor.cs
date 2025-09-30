@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,7 +13,7 @@ namespace ImageProcessingActivity
 {
     public partial class ImageProcessor : Form
     {
-        private Bitmap imageB, imageA;
+        private Bitmap imageB, imageA, resultImage;
         private Device device;
         bool isCamOn = false;
         Timer deviceTimer = new Timer();
@@ -38,31 +39,22 @@ namespace ImageProcessingActivity
             Bitmap currentFrame = GetDeviceFrame();
             if (currentFrame == null) return;
 
+            var old = pic_box1.Image;
+            pic_box1.Image = (Bitmap)currentFrame.Clone();  
+            old?.Dispose();
+
+            
             switch (mode)
             {
-                case ProcessingMode.Grayscale:
-                    webcam_grayscale(currentFrame);
-                    break;
-
-                case ProcessingMode.Invert:
-                    webcam_invert(currentFrame);
-                    break;
-
-                case ProcessingMode.Sepia:
-                    webcam_sepia(currentFrame);
-                    break;
-
-                case ProcessingMode.Copy:
-                case ProcessingMode.None:
-                default:
-                    currentFrame.Dispose();
-                    return;
+                case ProcessingMode.Grayscale: webcam_grayscale(currentFrame); break;
+                case ProcessingMode.Invert: webcam_invert(currentFrame); break;
+                case ProcessingMode.Sepia: webcam_sepia(currentFrame); break;
             }
 
-            var oldImage = pic_box2.Image;
-            pic_box2.Image = currentFrame;
-            pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
-            oldImage?.Dispose();
+            var old2 = pic_box1.Image;
+            pic_box1.Image = currentFrame;
+            pic_box1.SizeMode = PictureBoxSizeMode.StretchImage;
+            old2?.Dispose();
         }
 
         private Bitmap GetDeviceFrame()
@@ -75,10 +67,15 @@ namespace ImageProcessingActivity
                 if (clipboardImage == null)
                     return null;
 
-                Bitmap bmp32 = new Bitmap(clipboardImage.Width, clipboardImage.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                int targetWidth = pic_box1.Width;
+                int targetHeight = pic_box1.Height;
+
+                Bitmap bmp32 = new Bitmap(targetWidth, targetHeight, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
                 using (Graphics g = Graphics.FromImage(bmp32))
                 {
-                    g.DrawImage(clipboardImage, new Rectangle(0, 0, bmp32.Width, bmp32.Height));
+                    g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                    g.DrawImage(clipboardImage, new Rectangle(0, 0, targetWidth, targetHeight));
                 }
 
                 return bmp32;
@@ -122,6 +119,7 @@ namespace ImageProcessingActivity
                             grayCopy.SetPixel(x, y, Color.FromArgb(greyValue, greyValue, greyValue));
                         }
                     pic_box2.Image?.Dispose();
+                    pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
                     pic_box2.Image = grayCopy;
                     break;
                 case ProcessingMode.Invert:
@@ -133,6 +131,7 @@ namespace ImageProcessingActivity
                             invertCopy.SetPixel(x, y, Color.FromArgb(255 - pixelColor.R, 255 - pixelColor.G, 255 - pixelColor.B));
                         }
                     pic_box2.Image?.Dispose();
+                    pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
                     pic_box2.Image = invertCopy;
                     break;
                 case ProcessingMode.Sepia:
@@ -152,6 +151,7 @@ namespace ImageProcessingActivity
                             sepiaCopy.SetPixel(x, y, Color.FromArgb(tr, tg, tb));
                         }
                     pic_box2.Image?.Dispose();
+                    pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
                     pic_box2.Image = sepiaCopy;
                     break;
             }
@@ -232,8 +232,10 @@ namespace ImageProcessingActivity
         {
             pic_box1.Image?.Dispose();
             pic_box2.Image?.Dispose();
+            pic_box3.Image?.Dispose();
             pic_box1.Image = null;
             pic_box2.Image = null;
+            pic_box3.Image = null;
             label2.Text = "RESULT";
         }
 
@@ -377,26 +379,38 @@ namespace ImageProcessingActivity
 
         private void subtract_Click(object sender, EventArgs e)
         {
-            if (pic_box1.Image == null)
+            Bitmap foreground;
+
+            if (isCamOn)
             {
-                MessageBox.Show("Please load a foreground image first!");
-                return;
+                // Take a fresh snapshot from the webcam
+                foreground = GetDeviceFrame();
+                if (foreground == null)
+                {
+                    MessageBox.Show("Failed to capture webcam image.");
+                    return;
+                }
+            }
+            else
+            {
+                if (pic_box1.Image == null)
+                {
+                    MessageBox.Show("Please load a foreground image first!");
+                    return;
+                }
+                foreground = new Bitmap(pic_box1.Image);
             }
 
-            Bitmap foreground = new Bitmap(pic_box1.Image);
             Bitmap background;
 
-            if (isCamOn && pic_box2.Image != null)
-            {
-                background = new Bitmap(pic_box2.Image);
-            }
-            else if (pic_box2.Image != null)
+            if (pic_box2.Image != null)
             {
                 background = new Bitmap(pic_box2.Image);
             }
             else
             {
                 MessageBox.Show("Please load or start webcam for background!");
+                foreground.Dispose();
                 return;
             }
 
@@ -412,6 +426,7 @@ namespace ImageProcessingActivity
                     Color fg = foreground.GetPixel(x, y);
                     Color bg = background.GetPixel(x, y);
 
+                    // Green-screen effect: replace green with background
                     if (fg.G > 100 && fg.G > fg.R + 40 && fg.G > fg.B + 40)
                     {
                         result.SetPixel(x, y, bg);
@@ -424,12 +439,13 @@ namespace ImageProcessingActivity
             }
 
             pic_box3.Image?.Dispose();
-            pic_box3.Image = result;
             pic_box3.SizeMode = PictureBoxSizeMode.StretchImage;
-
+            pic_box3.Image = result;
+            
             foreground.Dispose();
             background.Dispose();
         }
+
 
         private void startWebcamToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -455,10 +471,83 @@ namespace ImageProcessingActivity
             }
         }
 
+        private Bitmap Convolution_Filter(Bitmap source, double[,] kernel, double factor = 1.0, double offset = 0.0)
+        {
+            int width = source.Width;
+            int height = source.Height;
+            Bitmap result = new Bitmap(width, height);
+
+            BitmapData srcData = source.LockBits(new Rectangle(0, 0, width, height),
+                                ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
+            BitmapData resData = result.LockBits(new Rectangle(0, 0, width, height),
+                                ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
+
+            int stride = srcData.Stride;
+            int bytes = stride * height;
+            int kCenter = kernel.GetLength(0) / 2; // should be 1 for 3x3
+
+            unsafe
+            {
+                byte* srcPtr = (byte*)srcData.Scan0;
+                byte* resPtr = (byte*)resData.Scan0;
+
+                for (int y = kCenter; y < height - kCenter; y++)
+                {
+                    for (int x = kCenter; x < width - kCenter; x++)
+                    {
+                        double r = 0.0, g = 0.0, b = 0.0;
+
+                        for (int ky = -kCenter; ky <= kCenter; ky++)
+                        {
+                            for (int kx = -kCenter; kx <= kCenter; kx++)
+                            {
+                                int px = (x + kx) * 3;    
+                                int py = (y + ky) * stride;
+
+                                byte* pixel = srcPtr + py + px;
+
+                                double kval = kernel[ky + kCenter, kx + kCenter];
+
+                                b += pixel[0] * kval; // Blue
+                                g += pixel[1] * kval; // Green
+                                r += pixel[2] * kval; // Red
+                            }
+                        }
+
+                        int newR = Math.Min(Math.Max((int)(factor * r + offset), 0), 255);
+                        int newG = Math.Min(Math.Max((int)(factor * g + offset), 0), 255);
+                        int newB = Math.Min(Math.Max((int)(factor * b + offset), 0), 255);
+
+                        int pos = y * stride + x * 3;
+                        resPtr[pos] = (byte)newB;
+                        resPtr[pos + 1] = (byte)newG;
+                        resPtr[pos + 2] = (byte)newR;
+                    }
+                }
+            }
+
+            source.UnlockBits(srcData);
+            result.UnlockBits(resData);
+
+            return result;
+        }
         private void stopWebcamToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            device?.Stop();
-            isCamOn = false;
+            if (device != null)
+            {
+                device?.Stop();
+                deviceTimer.Stop();
+                isCamOn = false;
+
+                pic_box1.Image?.Dispose();
+                pic_box1.Image = null;
+
+                pic_box2.Image?.Dispose();
+                pic_box2.Image = null;
+            } else
+            {
+                MessageBox.Show("Webcam is not active.");
+            }
         }
 
         private void save_Click(object sender, EventArgs e)
@@ -528,5 +617,168 @@ namespace ImageProcessingActivity
                 }
             }
         }
+
+        private readonly double[,] SmoothKernel = {
+            { 1, 1, 1 },
+            { 1, 1, 1 },
+            { 1, 1, 1 }
+        };
+
+        private readonly double[,] GaussianBlurKernel = {
+            { 1, 2, 1 },
+            { 2, 4, 2 },
+            { 1, 2, 1 }
+        };
+
+        private readonly double[,] SharpenKernel = {
+            {  0, -2,  0 },
+            { -2, 11, -2 },
+            {  0, -2,  0 }
+        };
+
+        private readonly double[,] MeanRemovalKernel = {
+            { -1, -1, -1 },
+            { -1,  9, -1 },
+            { -1, -1, -1 }
+        };
+
+        private readonly double[,] EmbossLaplacianKernel = {
+            { -1,  0, -1 },
+            {  0,  4,  0 },
+            { -1,  0, -1 }
+        };
+
+
+        // Emboss: Laplascian
+        private readonly double[,] EmbossKernel = {
+            {  -1,  0,  -1 },
+            {   0,  4,   0 },
+            {  -1,  0, -11 }
+        };
+
+        // Emboss: Horizontal + Vertical
+        private readonly double[,] EmbossHVKernel = {
+            {  0, -1,  0 },
+            { -1,  4, -1 },
+            {  0, -1,  0 }
+        };
+
+        // Emboss: All directions (strong edge)
+        private readonly double[,] EmbossAllKernel = {
+            { -1, -1, -1 },
+            { -1,  8, -1 },
+            { -1, -1, -1 }
+        };
+
+        // Emboss: Lossy variant
+        private readonly double[,] EmbossLossyKernel = {
+            {  1, -2,  1 },
+            { -2,  4, -2 },
+            { -2,  1, -2 }
+        };
+
+        // Emboss: Horizontal only
+        private readonly double[,] EmbossHorizontalKernel = {
+            {  0,  0,  0 },
+            { -1,  2, -1 },
+            {  0,  0,  0 }
+        };
+
+        // Emboss: Vertical only
+        private readonly double[,] EmbossVerticalKernel = {
+            {  0, -1,  0 },
+            {  0,  0,  0 },
+            {  0,  1,  0 }
+        };
+
+        private void smoothFilter_Click(object sender, EventArgs e)
+        {
+            if (imageB == null) return;
+            resultImage = Convolution_Filter(imageB, SmoothKernel, 1.0 / 9.0, 0.0);
+            pic_box2.Image = resultImage;
+            pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
+        }
+        
+        private void gaussianBlurFilter_Click(object sender, EventArgs e)
+        {
+            if (imageB == null) return;
+            resultImage = Convolution_Filter(imageB, GaussianBlurKernel, 1.0 / 16.0, 0.0);
+            pic_box2.Image = resultImage;
+            pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
+        }
+
+        private void sharpenFilter_Click(object sender, EventArgs e)
+        {
+            if (imageB == null) return;
+            resultImage = Convolution_Filter(imageB, SharpenKernel, 1.0 / 3.0, 0.0);
+            pic_box2.Image = resultImage;
+            pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
+        }
+
+        private void meanRemovalFilter_Click(object sender, EventArgs e)
+        {
+            if (imageB == null) return;
+            resultImage = Convolution_Filter(imageB, MeanRemovalKernel, 1.0, 0.0);
+            pic_box2.Image = resultImage;
+            pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
+        }
+
+        // Emboss Filters
+        private void embossFilter_Click(object sender, EventArgs e)
+        {
+            if (imageB == null) return;
+            resultImage = Convolution_Filter(imageB, EmbossKernel, 1.0, 128.0);
+            pic_box2.Image = resultImage;
+            pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
+        }
+        private void embossLaplacianFilter_Click(object sender, EventArgs e)
+        {
+            if (imageB == null) return;
+            // Factor = 1.0, Offset = 127 (to shift grayscale into visible range)
+            resultImage = Convolution_Filter(imageB, EmbossLaplacianKernel, 1.0, 127.0);
+            pic_box2.Image = resultImage;
+            pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
+        }
+        private void embossHVFilter_Click(object sender, EventArgs e)
+        {
+            if (imageB == null) return;
+            resultImage = Convolution_Filter(imageB, EmbossHVKernel, 1.0, 128.0);
+            pic_box2.Image = resultImage;
+            pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
+        }
+
+        private void embossAllFilter_Click(object sender, EventArgs e)
+        {
+            if (imageB == null) return;
+            resultImage = Convolution_Filter(imageB, EmbossAllKernel, 1.0, 128.0);
+            pic_box2.Image = resultImage;
+            pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
+        }
+
+        private void embossLossyFilter_Click(object sender, EventArgs e)
+        {
+            if (imageB == null) return;
+            resultImage = Convolution_Filter(imageB, EmbossLossyKernel, 1.0, 128.0);
+            pic_box2.Image = resultImage;
+            pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
+        }
+
+        
+        private void embossHorizontalFilter_Click(object sender, EventArgs e)
+        {
+            if (imageB == null) return;
+            resultImage = Convolution_Filter(imageB, EmbossHorizontalKernel, 1.0, 128.0);
+            pic_box2.Image = resultImage;
+            pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
+        }
+
+        private void embossVerticalFilter_Click(object sender, EventArgs e)
+        {
+            if (imageB == null) return;
+            resultImage = Convolution_Filter(imageB, EmbossVerticalKernel, 1.0, 128.0);
+            pic_box2.Image = resultImage;
+            pic_box2.SizeMode = PictureBoxSizeMode.StretchImage;
+        }
+
     }
 }
